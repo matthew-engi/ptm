@@ -21,3 +21,8 @@ pub const File = struct {
 pub const Reader = @import("./src/reader.zig").Reader;
 /// Writer struct to write PTM files
 pub const Writer = @import("./src/writer.zig").Writer;
+
+// Tests to verify validity of the package
+test {
+    _ = @import("tests/image_test.zig");
+}

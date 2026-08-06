@@ -52,7 +52,7 @@ pub const Image = struct {
 
         // Convert into Self (take ownership of data)
         const pixels = try Canvas.fromSlice(
-            allocator, image.height, image.width, image.pixels.asBytes(),
+            allocator, image.width, image.height, image.pixels.asBytes(),
         );
 
         return .{ .pixels = pixels };

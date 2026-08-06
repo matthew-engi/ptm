@@ -47,7 +47,9 @@ pub fn Matrix (
             rows: usize, columns: usize, 
             slice: []const u8
         ) !Self {
-            std.debug.assert(slice.len == rows * columns * @sizeOf(T));
+            if (slice.len != rows * columns * @sizeOf(T)) {
+                std.debug.panic("Expected {d} bytes, got {d}", .{rows * columns * @sizeOf(T), slice.len});
+            }
             var self = try Self.init(allocator, rows, columns);
 
             for (0..rows * columns) |i| {

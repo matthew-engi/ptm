@@ -3,7 +3,7 @@
 
 const math = @import("std").math;
 
-pub const Color = packed struct {
+pub const Color = struct {
     const Self = @This();
 
     pub const RED   = Self { .r = 255, .g = 0, .b = 0 };
@@ -35,7 +35,7 @@ pub const Color = packed struct {
     pub fn absDiff(lhs: *const Self, rhs: *const Self) Self {
         return .{
             .r = @max(lhs.r, rhs.r) - @min(lhs.r, rhs.r),
-            .g = @max(lhs.g, rhs.g) - @min(lhs.b, rhs.b),
+            .g = @max(lhs.g, rhs.g) - @min(lhs.g, rhs.g),
             .b = @max(lhs.b, rhs.b) - @min(lhs.b, rhs.b),
         };
     }
