@@ -43,6 +43,7 @@
         "src",
         "LICENSE",
         "ptm.zig",
+        "tests"
         // For example...
         //"LICENSE",
         //"README.md",
