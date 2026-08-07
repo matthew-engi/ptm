@@ -25,19 +25,19 @@ pub const Writer = struct {
     /// Writes the information about the PTM into the file
     pub fn writeWithHeader(header: PTM.Header, writer: *std.Io.Writer, allocator: std.mem.Allocator, modes: []const Encoder.Modes, sprites: []const []const Image) !void {
         // Write the header first
-        try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIANESS);
-        try writer.writeInt(PTM.DIM_TYPE, header.width, PTM.ENDIANESS);
-        try writer.writeInt(PTM.RATE_TYPE, header.rate, PTM.ENDIANESS);
+        try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIANNESS);
+        try writer.writeInt(PTM.DIM_TYPE, header.width, PTM.ENDIANNESS);
+        try writer.writeInt(PTM.RATE_TYPE, header.rate, PTM.ENDIANNESS);
 
         // Write sprites data
         var color_map = std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE).init(allocator);
         defer color_map.deinit();
 
-        try writer.writeInt(PTM.COLOR_RANGE_TYPE, @intCast(header.colors.len), PTM.ENDIANESS);
+        try writer.writeInt(PTM.COLOR_RANGE_TYPE, @intCast(header.colors.len), PTM.ENDIANNESS);
 
         for (header.colors, 0..) |color, i| {
             try color_map.put(color, @intCast(i)); // May fail if too many colors
-            try writer.writeStruct(color, PTM.ENDIANESS);
+            try writer.writeStruct(color, PTM.ENDIANNESS);
         }
 
         for (sprites, 0..) |sprite, i| {

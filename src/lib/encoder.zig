@@ -14,7 +14,7 @@ pub const Modes = enum(u8) {
 
     /// Run-length encoding
     /// Best use: Repeating colors in long chains
-    /// https://en.wikipedia.org/wiki/Run-length_encoding 
+    /// https://en.wikipedia.org/wiki/Run-length_encoding
     rle,
 };
 
@@ -29,8 +29,8 @@ pub fn encode(allocator: std.mem.Allocator, mode: Modes, data: []const Image, he
         try map.put(c, @intCast(i));
     }
 
-    try writer.writeInt(PTM.MODE_TYPE, @intFromEnum(mode), PTM.ENDIANESS);
-    try writer.writeInt(PTM.LENGTH_TYPE, @intCast(data.len), PTM.ENDIANESS);
+    try writer.writeInt(PTM.MODE_TYPE, @intFromEnum(mode), PTM.ENDIANNESS);
+    try writer.writeInt(PTM.LENGTH_TYPE, @intCast(data.len), PTM.ENDIANNESS);
 
     try switch (mode) {
         .default => Algorithms.Default.comp(data, header, writer, &map),
@@ -65,32 +65,22 @@ pub const Algorithms = struct {
         const Self = @This();
 
         /// Compression method for the Default algorithm
-        fn comp(
-            data: []const Image, 
-            _: *const PTM.Header, 
-            writer: *std.Io.Writer, 
-            map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)
-        ) !void {
+        fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)) !void {
 
             // Writing the images
             for (data) |image| {
                 for (image.pixels.items) |pixel| {
                     const index = map.get(pixel) orelse return error.UnknownIndex; // Turning Color -> Index
-                    try writer.writeInt(PTM.COLOR_RANGE_TYPE, index, PTM.ENDIANESS);
+                    try writer.writeInt(PTM.COLOR_RANGE_TYPE, index, PTM.ENDIANNESS);
                 }
             }
         }
 
         /// Decompression method for the Default algorithm
-        fn decomp(
-            allocator: std.mem.Allocator, 
-            header: *const PTM.Header, 
-            reader: *std.Io.Reader, 
-            map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)
-        ) ![]Image {
+        fn decomp(allocator: std.mem.Allocator, header: *const PTM.Header, reader: *std.Io.Reader, map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)) ![]Image {
 
             // Find amount of images
-            const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANESS);
+            const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANNESS);
             const capacity = @as(usize, header.height) * @as(usize, header.width);
 
             // ALLOC: Allocated memory for storing the images within the sprite + reading buffer (size of img)
@@ -138,25 +128,20 @@ pub const Algorithms = struct {
 
         /// Reads the next color entry
         fn nextEntry(reader: *std.Io.Reader) !Entry {
-            const idx = try reader.takeInt(PTM.COLOR_RANGE_TYPE, PTM.ENDIANESS);
-            const len = try reader.takeInt(AMOUNT_TYPE, PTM.ENDIANESS);
+            const idx = try reader.takeInt(PTM.COLOR_RANGE_TYPE, PTM.ENDIANNESS);
+            const len = try reader.takeInt(AMOUNT_TYPE, PTM.ENDIANNESS);
 
             return .{ .idx = idx, .len = len };
         }
 
         /// Writes a color entry
         fn writeEntry(writer: *std.Io.Writer, color_index: PTM.COLOR_RANGE_TYPE, amount: AMOUNT_TYPE) !void {
-            try writer.writeInt(PTM.COLOR_RANGE_TYPE, color_index, PTM.ENDIANESS);
-            try writer.writeInt(AMOUNT_TYPE, amount, PTM.ENDIANESS);
+            try writer.writeInt(PTM.COLOR_RANGE_TYPE, color_index, PTM.ENDIANNESS);
+            try writer.writeInt(AMOUNT_TYPE, amount, PTM.ENDIANNESS);
         }
 
         /// Compression method for the RLE algorithm
-        fn comp(
-            data: []const Image, 
-            _: *const PTM.Header, 
-            writer: *std.Io.Writer, 
-            map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)
-        ) !void {
+        fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)) !void {
 
             // Writing the images
             for (data) |image| {
@@ -178,15 +163,10 @@ pub const Algorithms = struct {
         }
 
         /// Decompression method for the Default algorithm
-        fn decomp(
-            allocator: std.mem.Allocator, 
-            header: *const PTM.Header, 
-            reader: *std.Io.Reader, 
-            map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)
-        ) ![]Image {
+        fn decomp(allocator: std.mem.Allocator, header: *const PTM.Header, reader: *std.Io.Reader, map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)) ![]Image {
 
             // Find amount of images
-            const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANESS);
+            const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANNESS);
             const capacity = @as(usize, header.width) * @as(usize, header.height);
 
             // ALLOC: Allocate memory for the images

@@ -7,24 +7,24 @@ const Image = @import("./helpers/image.zig").Image;
 
 // -------------------------------------------------------------------------------- //
 // Header encoding
-pub const DIM_TYPE = u8;         // Limit of dimensions (height, width)
-pub const RATE_TYPE = u8;        // Limit of framerate
-pub const MODE_TYPE = u8;        // Different compression modes
-pub const LENGTH_TYPE = u16;     // How many pictures a sprite can have
+pub const DIM_TYPE = u8; // Limit of dimensions (height, width)
+pub const RATE_TYPE = u8; // Limit of framerate
+pub const MODE_TYPE = u8; // Different compression modes
+pub const LENGTH_TYPE = u16; // How many pictures a sprite can have
 pub const COLOR_RANGE_TYPE = u8; // Limit of differently encoded colors (colors)
 
-// Endianess
-pub const ENDIANESS = std.builtin.Endian.big;
+// ENDIANNESS
+pub const ENDIANNESS = std.builtin.Endian.big;
 // -------------------------------------------------------------------------------- //
 
 // Data encodings are found in compression.zig
 
 /// Data included in the header of the PTM file
 pub const Header = struct {
-   height: DIM_TYPE,   // Height of each image
-   width: DIM_TYPE,    // Width of each image
-   rate: RATE_TYPE,    // Rate at which the sprites play
-   colors: []Color,    // Unique colors found in the image
+    height: DIM_TYPE, // Height of each image
+    width: DIM_TYPE, // Width of each image
+    rate: RATE_TYPE, // Rate at which the sprites play
+    colors: []Color, // Unique colors found in the image
 };
 
 /// Complete struct with header and data

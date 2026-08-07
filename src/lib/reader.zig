@@ -22,12 +22,12 @@ pub const Reader = struct {
     /// Gets the header for the Reader
     pub fn getHeader(self: *const Self, reader: *std.Io.Reader) !PTM.Header {
         // General data
-        const height = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANESS);
-        const width = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANESS);
-        const rate = try reader.takeInt(PTM.RATE_TYPE, PTM.ENDIANESS);
+        const height = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
+        const width = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
+        const rate = try reader.takeInt(PTM.RATE_TYPE, PTM.ENDIANNESS);
 
         // Colors
-        const count = try reader.takeInt(PTM.COLOR_RANGE_TYPE, PTM.ENDIANESS);
+        const count = try reader.takeInt(PTM.COLOR_RANGE_TYPE, PTM.ENDIANNESS);
 
         // ALLOC: Allocate memory for the list of colors
         const colors = try self.allocator.alloc(Color, @intCast(count));
@@ -48,7 +48,7 @@ pub const Reader = struct {
 
         while (true) {
             // Read the mode of the sprite row, then feed it in the decoder
-            const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANESS) catch |err| switch (err) {
+            const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANNESS) catch |err| switch (err) {
                 error.EndOfStream => break,
                 else => return err,
             };
