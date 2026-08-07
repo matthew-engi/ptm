@@ -6,12 +6,13 @@ const Color = @import("./color.zig").Color;
 const Image = @import("./image.zig").Image;
 
 // Endianess
-pub const ENDIAN_TYPE = std.builtin.Endian.little;
+pub const ENDIAN_TYPE = std.builtin.Endian.big;
 
 // Header encoding
 pub const DIM_TYPE = u8;            // Limit of dimensions (height, width)
 pub const RATE_TYPE = u8;           // Limit of framerate
 pub const MODE_TYPE = u8;           // Different compression modes 
+pub const LENGTH_TYPE = u16;        // How many pictures a sprite can have
 pub const COLOR_RANGE_TYPE = u8;    // Limit of differently encoded colors (colors)
 
 // Data encodings are found in compression.zig

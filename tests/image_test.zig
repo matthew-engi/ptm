@@ -25,3 +25,99 @@ test "Read Image: 2x2 RGCB Image" {
 
     try std.testing.expectEqualDeep(expected[0..], image.pixels.items);
 }
+
+test "Image to PTM: DEFAULT 2x2 RGCB Image" {
+    const file = try std.Io.Dir.cwd().openFile(
+        std.testing.io,
+        "./tests/images/2x2RGCB.png",
+        .{},
+    );
+    defer file.close(std.testing.io);
+
+    const image = try ptm.Utilities.Image.fromFile(
+        std.testing.io,
+        file,
+        std.testing.allocator,
+    );
+    defer image.deinit(std.testing.allocator);
+
+    var buffer: [1024]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buffer);
+
+    const uniques = try image.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    const header = ptm.Writer.getHeader(2, 2, 30, uniques);
+    try ptm.Writer.writeWithHeader(
+        header,
+        &writer,
+        std.testing.allocator,
+        &.{.default},
+        &.{
+            &.{image},
+        },
+    );
+
+    const resp: [23]u8 = .{
+        2, 2, 30, 4, 255, 0, 0, 0, 255, 0, 0, 255, 
+        255, 0, 0, 255, 0, 0, 1, 0, 1, 2, 3
+    };
+
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+}
+
+test "Image to PTM: DEFAULT 2x2 BLACK" {
+    const img: ptm.Utilities.Image = .{
+        .pixels = try ptm.Utilities.Matrix(ptm.Utilities.Color, ptm.Utilities.Color.BLACK).init(
+            std.testing.allocator, 2, 2
+        )
+    };
+    defer img.deinit(std.testing.allocator);
+
+    var buffer: [1024]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buffer);
+    const uniques = try img.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    const header = ptm.Writer.getHeader(2, 2, 15, uniques);
+    try ptm.Writer.writeWithHeader(
+        header,
+        &writer,
+        std.testing.allocator,
+        &.{.default},
+        &.{
+            &.{img},
+        },
+    );
+
+    const resp: [14]u8 = .{2, 2, 15, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+}
+
+test "Image to PTM: RLE 2x2 BLACK" {
+    const img: ptm.Utilities.Image = .{
+        .pixels = try ptm.Utilities.Matrix(ptm.Utilities.Color, ptm.Utilities.Color.BLACK).init(
+            std.testing.allocator, 2, 2
+        )
+    };
+    defer img.deinit(std.testing.allocator);
+
+    var buffer: [1024]u8 = undefined;
+    var writer = std.Io.Writer.fixed(&buffer);
+    const uniques = try img.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    const header = ptm.Writer.getHeader(2, 2, 15, uniques);
+    try ptm.Writer.writeWithHeader(
+        header,
+        &writer,
+        std.testing.allocator,
+        &.{.rle},
+        &.{
+            &.{img},
+        },
+    );
+
+    const resp: [12]u8 = .{2, 2, 15, 1, 0, 0, 0, 1, 0, 1, 0, 4};
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+}

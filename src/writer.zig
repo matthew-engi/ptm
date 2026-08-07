@@ -2,8 +2,9 @@
 //! Description: Writing section for the ptm file format
 
 const std = @import("std");
-const Color = @import("./color.zig");
+const Color = @import("./color.zig").Color;
 const Image = @import("./image.zig").Image;
+const Encoder = @import("./encoder.zig");
 
 // General structs for the format
 const PTM = @import("./mod.zig");
@@ -29,7 +30,8 @@ pub const Writer = struct {
       header: PTM.Header, 
       writer: *std.Io.Writer, 
       allocator: std.mem.Allocator,
-      sprites: [][]Image
+      modes:   []const Encoder.Modes,
+      sprites: []const []const Image
    ) !void {
       // Write the header first
       try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIAN_TYPE);
@@ -53,26 +55,8 @@ pub const Writer = struct {
          try writer.writeStruct(color, PTM.ENDIAN_TYPE);
       }
 
-      for (sprites) |sprite| {
-         // Write length of sprite
-         try writer.writeInt(
-            PTM.IMAGE_RANGE_TYPE, 
-            @intCast(sprite.len), 
-            PTM.ENDIAN_TYPE
-         );
-
-         for (sprite) |image| {
-            for (image.pixels) |pixel| {
-               const value = color_map.get(pixel) orelse return error.UnknownColor;
-               try writer.writeInt(
-                  PTM.COLOR_RANGE_TYPE, 
-                  value, 
-                  PTM.ENDIAN_TYPE
-               );
-            }
-         }
+      for (sprites, 0..) |sprite, i| {
+         try Encoder.encode(allocator, modes[i], sprite, &header, writer);
       }
-      
-      try writer.flush();
    }
 };

@@ -3,7 +3,7 @@
 
 const math = @import("std").math;
 
-pub const Color = struct {
+pub const Color = extern struct {
     const Self = @This();
 
     pub const RED   = Self { .r = 255, .g = 0, .b = 0 };

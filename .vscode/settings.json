@@ -3,5 +3,27 @@
       "build",
       "test",
       "-Dtest-filter=${filter}"
-   ]
+   ],
+   "todohighlight.keywords": [
+        {
+            "text": "IDEA:",
+            "color": "#000000",
+            "backgroundColor": "green",
+            "borderRadius": "2px"
+        },
+        
+        {
+            "text": "ALLOC:",
+            "color": "#000000",
+            "backgroundColor": "blue",
+            "isWholeLine": true,
+        },
+
+        {
+            "text": "CHECKPOINT:",
+            "color": "#000000",
+            "backgroundColor": "yellow",
+            "isWholeLine": true,
+        },
+    ],
 }
