@@ -26,7 +26,7 @@ pub const Header = struct {
    rate: RATE_TYPE, // Rate at which the sprites play
    colors: []Color, // Unique colors found in the image
 
-   pub fn deinit(self: *Header, allocator: std.mem.Allocator) void {
+   pub fn deinit(self: *const Header, allocator: std.mem.Allocator) void {
       allocator.free(self.colors);
    }
 };
@@ -36,7 +36,7 @@ pub const PTM = struct {
    header: Header,
    data: [][]Image,
 
-   pub fn deinit(self: *PTM, allocator: std.mem.Allocator) void {
+   pub fn deinit(self: *const PTM, allocator: std.mem.Allocator) void {
       self.header.deinit(allocator);
       for (self.data) |sprite| {
          for (sprite) |img| {
@@ -60,7 +60,7 @@ pub const Sprite = struct {
       return .{ .len = 0, .data = try allocator.alloc(Image, len) };
    }
 
-   pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
+   pub fn deinit(self: *const Self, allocator: std.mem.Allocator) void {
       for (0..self.len) |i| {
             self.data[i].deinit(allocator);
       }

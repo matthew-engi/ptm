@@ -25,7 +25,7 @@ pub fn Matrix (
         }
 
         /// Frees up memory taken by the Matrix
-        pub fn deinit(self: Self, allocator: std.mem.Allocator) void {
+        pub fn deinit(self: *const Self, allocator: std.mem.Allocator) void {
             allocator.free(self.items);
         }
 

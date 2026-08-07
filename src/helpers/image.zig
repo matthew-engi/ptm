@@ -22,7 +22,7 @@ pub const Image = struct {
     }
 
     /// Frees up memory allocated for an image
-    pub fn deinit(self: Self, allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *const Self, allocator: std.mem.Allocator) void {
         self.pixels.deinit(allocator);
     }
 
