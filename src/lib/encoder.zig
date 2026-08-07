@@ -95,11 +95,10 @@ pub const Algorithms = struct {
 
             // ALLOC: Allocated memory for storing the images within the sprite + reading buffer (size of img)
             var sprites = try PTM.Sprite.init(allocator, num);
-            const buffer = try allocator.alloc(PTM.COLOR_RANGE_TYPE, capacity);
-
-            defer allocator.free(buffer);
             errdefer sprites.deinit(allocator);
-
+            const buffer = try allocator.alloc(PTM.COLOR_RANGE_TYPE, capacity);
+            defer allocator.free(buffer);
+            
             // Enumerate through every image
             for (0..num) |_| {
                 try reader.readSliceAll(buffer); // Fill the buffer with image data
@@ -140,7 +139,6 @@ pub const Algorithms = struct {
         fn nextEntry(reader: *std.Io.Reader) !Entry {
             const idx = try reader.takeInt(PTM.COLOR_RANGE_TYPE, PTM.ENDIANNESS);
             const len = try reader.takeInt(AMOUNT_TYPE, PTM.ENDIANNESS);
-
             return .{ .idx = idx, .len = len };
         }
 
@@ -202,7 +200,6 @@ pub const Algorithms = struct {
                 errdefer allocator.free(colors);
 
                 var index: usize = 0;
-
                 while (index < capacity) {
                     const entry = try nextEntry(reader);
                     const color = map.get(entry.idx) orelse return error.UnknownIndex;
