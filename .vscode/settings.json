@@ -4,7 +4,7 @@
       "test",
       "-Dtest-filter=${filter}"
    ],
-   "todohighlight.keywords": [
+    "todohighlight.keywords": [
         {
             "text": "IDEA:",
             "color": "#000000",
@@ -17,6 +17,7 @@
             "color": "#000000",
             "backgroundColor": "blue",
             "isWholeLine": true,
+            "fontWeight": "bold"
         },
 
         {
@@ -24,6 +25,7 @@
             "color": "#000000",
             "backgroundColor": "yellow",
             "isWholeLine": true,
-        },
+            "fontWeight": "bold"
+        }
     ],
 }
