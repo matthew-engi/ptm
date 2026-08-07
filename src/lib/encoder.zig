@@ -65,7 +65,12 @@ pub const Algorithms = struct {
         const Self = @This();
 
         /// Compression method for the Default algorithm
-        fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)) !void {
+        fn comp(
+            data: []const Image, 
+            _: *const PTM.Header, 
+            writer: *std.Io.Writer, 
+            map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)
+        ) !void {
 
             // Writing the images
             for (data) |image| {
@@ -77,14 +82,19 @@ pub const Algorithms = struct {
         }
 
         /// Decompression method for the Default algorithm
-        fn decomp(allocator: std.mem.Allocator, header: *const PTM.Header, reader: *std.Io.Reader, map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)) ![]Image {
+        fn decomp(
+            allocator: std.mem.Allocator, 
+            header: *const PTM.Header, 
+            reader: *std.Io.Reader, 
+            map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)
+        ) ![]Image {
 
             // Find amount of images
             const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANNESS);
             const capacity = @as(usize, header.height) * @as(usize, header.width);
 
             // ALLOC: Allocated memory for storing the images within the sprite + reading buffer (size of img)
-            var sprites = try PTM.Sprite(num).init(allocator);
+            var sprites = try PTM.Sprite.init(allocator, num);
             const buffer = try allocator.alloc(PTM.COLOR_RANGE_TYPE, capacity);
 
             defer allocator.free(buffer);
@@ -111,7 +121,7 @@ pub const Algorithms = struct {
                 } });
             }
 
-            return sprites.data.toOwnedSlice();
+            return sprites.data;
         }
     };
 
@@ -141,7 +151,12 @@ pub const Algorithms = struct {
         }
 
         /// Compression method for the RLE algorithm
-        fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)) !void {
+        fn comp(
+            data: []const Image, 
+            _: *const PTM.Header, 
+            writer: *std.Io.Writer, 
+            map: *std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE)
+        ) !void {
 
             // Writing the images
             for (data) |image| {
@@ -163,7 +178,12 @@ pub const Algorithms = struct {
         }
 
         /// Decompression method for the Default algorithm
-        fn decomp(allocator: std.mem.Allocator, header: *const PTM.Header, reader: *std.Io.Reader, map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)) ![]Image {
+        fn decomp(
+            allocator: std.mem.Allocator, 
+            header: *const PTM.Header, 
+            reader: *std.Io.Reader, 
+            map: *std.AutoHashMap(PTM.COLOR_RANGE_TYPE, Color)
+        ) ![]Image {
 
             // Find amount of images
             const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANNESS);
@@ -171,6 +191,10 @@ pub const Algorithms = struct {
 
             // ALLOC: Allocate memory for the images
             var imgs = try std.ArrayList(Image).initCapacity(allocator, num);
+            errdefer {
+                for (imgs.items) |img| img.deinit(allocator);
+                imgs.deinit(allocator);
+            }
 
             while (imgs.items.len < num) {
                 // ALLOC: Allocate memory for the color streams

@@ -21,43 +21,55 @@ pub const ENDIANNESS = std.builtin.Endian.big;
 
 /// Data included in the header of the PTM file
 pub const Header = struct {
-    height: DIM_TYPE, // Height of each image
-    width: DIM_TYPE, // Width of each image
-    rate: RATE_TYPE, // Rate at which the sprites play
-    colors: []Color, // Unique colors found in the image
+   height: DIM_TYPE, // Height of each image
+   width: DIM_TYPE, // Width of each image
+   rate: RATE_TYPE, // Rate at which the sprites play
+   colors: []Color, // Unique colors found in the image
+
+   pub fn deinit(self: *Header, allocator: std.mem.Allocator) void {
+      allocator.free(self.colors);
+   }
 };
 
 /// Complete struct with header and data
 pub const PTM = struct {
-    header: Header,
-    data: [][]Image,
+   header: Header,
+   data: [][]Image,
+
+   pub fn deinit(self: *PTM, allocator: std.mem.Allocator) void {
+      self.header.deinit(allocator);
+      for (self.data) |sprite| {
+         for (sprite) |img| {
+            img.deinit(allocator);
+         }
+         allocator.free(sprite);
+      }
+
+      allocator.free(self.data);
+   }
 };
 
 /// Image array wrapper
-pub fn Sprite(n: usize) type {
-    return struct {
-        const Self = @This();
+pub const Sprite = struct {
+   const Self = @This();
 
-        len: usize,
-        data: []Image,
+   len: usize,
+   data: []Image,
 
-        /// Initializes the struct
-        pub fn init(allocator: std.mem.Allocator) !Self {
-            return .{ .len = 0, .data = try allocator.alloc(Image, n) };
-        }
+   pub fn init(allocator: std.mem.Allocator, len: usize) !Self {
+      return .{ .len = 0, .data = try allocator.alloc(Image, len) };
+   }
 
-        /// De-allocates the ArrayList and items inside of it.
-        pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
-            for (0..self.len) |i| {
-                self.data[i].deinit(allocator);
-            }
-            allocator.free(self.data);
-        }
+   pub fn deinit(self: *Self, allocator: std.mem.Allocator) void {
+      for (0..self.len) |i| {
+            self.data[i].deinit(allocator);
+      }
+      allocator.free(self.data);
+   }
 
-        /// Adds an entry and raises the inner counter.
-        pub fn add(self: *Self, image: Image) void {
-            self.data[self.i] = image;
-            self.len += 1;
-        }
-    };
-}
+   /// Adds an entry and raises the inner counter.
+   pub fn add(self: *Self, image: Image) void {
+      self.data[self.len] = image;
+      self.len += 1;
+   }
+};

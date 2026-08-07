@@ -20,7 +20,11 @@ pub const Reader = struct {
     }
 
     /// Gets the header for the Reader
-    pub fn getHeader(self: *const Self, reader: *std.Io.Reader) !PTM.Header {
+    pub fn getHeader(
+        self: *const Self, 
+        reader: *std.Io.Reader
+    ) !PTM.Header {
+    
         // General data
         const height = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
         const width = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
@@ -39,10 +43,16 @@ pub const Reader = struct {
     }
 
     /// Returns an array of sprites
-    pub fn loadWithHeader(self: *const Self, header: PTM.Header, reader: *std.Io.Reader) !PTM {
+    pub fn loadWithHeader(
+        self: *const Self, 
+        header: PTM.Header, 
+        reader: *std.Io.Reader
+    ) !PTM.PTM {
         var sprites: std.ArrayList([]Image) = .empty;
         errdefer {
-            for (sprites.items) |sprite| sprite.deinit(self.allocator);
+            for (sprites.items) |sprite| {
+                for (sprite) |*img| { img.deinit(self.allocator); }
+            }
             sprites.deinit(self.allocator);
         }
 

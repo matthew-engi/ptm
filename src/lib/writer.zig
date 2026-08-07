@@ -12,8 +12,15 @@ const PTM = @import("../mod.zig");
 pub const Writer = struct {
     const Self = @This();
 
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator) Self {
+        return .{ .allocator = allocator };
+    }
+
     /// Gets the format of the header for the Writer
     pub fn getHeader(
+        _: *const Self,
         height: u8,
         width: u8,
         rate: u8,
@@ -23,14 +30,21 @@ pub const Writer = struct {
     }
 
     /// Writes the information about the PTM into the file
-    pub fn writeWithHeader(header: PTM.Header, writer: *std.Io.Writer, allocator: std.mem.Allocator, modes: []const Encoder.Modes, sprites: []const []const Image) !void {
+    pub fn writeWithHeader(
+        self: *const Self, 
+        header: PTM.Header, 
+        writer: *std.Io.Writer, 
+        modes: []const Encoder.Modes, 
+        sprites: []const []const Image
+    ) !void {
+
         // Write the header first
         try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIANNESS);
         try writer.writeInt(PTM.DIM_TYPE, header.width, PTM.ENDIANNESS);
         try writer.writeInt(PTM.RATE_TYPE, header.rate, PTM.ENDIANNESS);
 
         // Write sprites data
-        var color_map = std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE).init(allocator);
+        var color_map = std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE).init(self.allocator);
         defer color_map.deinit();
 
         try writer.writeInt(PTM.COLOR_RANGE_TYPE, @intCast(header.colors.len), PTM.ENDIANNESS);
@@ -41,7 +55,7 @@ pub const Writer = struct {
         }
 
         for (sprites, 0..) |sprite, i| {
-            try Encoder.encode(allocator, modes[i], sprite, &header, writer);
+            try Encoder.encode(self.allocator, modes[i], sprite, &header, writer);
         }
     }
 };

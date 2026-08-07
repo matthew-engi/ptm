@@ -42,16 +42,16 @@ test "Image to PTM: DEFAULT 2x2 RGCB Image" {
     defer image.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = std.Io.Writer.fixed(&buffer);
 
     const uniques = try image.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    const header = ptm.Writer.getHeader(2, 2, 30, uniques);
-    try ptm.Writer.writeWithHeader(
+    var writer = ptm.Writer.init(std.testing.allocator);
+    const header = writer.getHeader(2, 2, 30, uniques);
+    var io_writer = std.Io.Writer.fixed(&buffer);
+    try writer.writeWithHeader(
         header,
-        &writer,
-        std.testing.allocator,
+        &io_writer,
         &.{.default},
         &.{
             &.{image},
@@ -63,7 +63,7 @@ test "Image to PTM: DEFAULT 2x2 RGCB Image" {
         255, 0, 0, 255, 0, 0, 1, 0, 1, 2, 3
     };
 
-    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..io_writer.end]);
 }
 
 test "Image to PTM: DEFAULT 2x2 BLACK" {
@@ -75,15 +75,15 @@ test "Image to PTM: DEFAULT 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = std.Io.Writer.fixed(&buffer);
+    var writer = ptm.Writer.init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    const header = ptm.Writer.getHeader(2, 2, 15, uniques);
-    try ptm.Writer.writeWithHeader(
+    const header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
         header,
-        &writer,
-        std.testing.allocator,
+        &io_writer,
         &.{.default},
         &.{
             &.{img},
@@ -91,7 +91,7 @@ test "Image to PTM: DEFAULT 2x2 BLACK" {
     );
 
     const resp: [14]u8 = .{2, 2, 15, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
-    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..io_writer.end]);
 }
 
 test "Image to PTM: RLE 2x 2x2 BLACK" {
@@ -103,15 +103,15 @@ test "Image to PTM: RLE 2x 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = std.Io.Writer.fixed(&buffer);
+    var writer = ptm.Writer.init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    const header = ptm.Writer.getHeader(2, 2, 15, uniques);
-    try ptm.Writer.writeWithHeader(
+    const header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
         header,
-        &writer,
-        std.testing.allocator,
+        &io_writer,
         &.{.rle},
         &.{
             &.{img, img},
@@ -119,7 +119,7 @@ test "Image to PTM: RLE 2x 2x2 BLACK" {
     );
 
     const resp: [14]u8 = .{2, 2, 15, 1, 0, 0, 0, 1, 0, 2, 0, 4, 0, 4};
-    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..io_writer.end]);
 }
 
 test "Image to PTM: RLE x2 2x2 BLACK" {
@@ -131,15 +131,15 @@ test "Image to PTM: RLE x2 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = std.Io.Writer.fixed(&buffer);
+    var writer = ptm.Writer.init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    const header = ptm.Writer.getHeader(2, 2, 15, uniques);
-    try ptm.Writer.writeWithHeader(
+    const header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
         header,
-        &writer,
-        std.testing.allocator,
+        &io_writer,
         &.{.rle, .rle},
         &.{
             &.{img},
@@ -148,5 +148,83 @@ test "Image to PTM: RLE x2 2x2 BLACK" {
     );
 
     const resp: [17]u8 = .{2, 2, 15, 1, 0, 0, 0, 1, 0, 1, 0, 4, 1, 0, 1, 0, 4};
-    try std.testing.expectEqualDeep(resp[0..], buffer[0..writer.end]);
+    try std.testing.expectEqualDeep(resp[0..], buffer[0..io_writer.end]);
+}
+
+test "Back to Back: RLE 2x 2x2 BLACK" {
+    var buffer: [14]u8 = undefined;
+
+    const img: ptm.Helpers.Image = .{
+        .pixels = try ptm.Helpers.Matrix(ptm.Helpers.Color, ptm.Helpers.Color.BLACK).init(
+            std.testing.allocator, 2, 2
+        )
+    };
+    defer img.deinit(std.testing.allocator);
+
+    var writer = ptm.Writer.init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
+    
+    const uniques = try img.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    var header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
+        header,
+        &io_writer,
+        &.{.rle},
+        &.{
+            &.{img, img},
+        },
+    );
+
+    var io_reader = std.Io.Reader.fixed(&buffer);
+    const reader = ptm.Reader.init(std.testing.allocator);
+    header = try reader.getHeader(&io_reader);
+
+    var ptmimg = try reader.loadWithHeader(
+        header, 
+        &io_reader
+    );
+    defer ptmimg.deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(ptmimg.header.width, 2);
+}
+
+test "Back to Back: DEFAULT 2x 2x2 BLACK" {
+    var buffer: [18]u8 = undefined;
+
+    const img: ptm.Helpers.Image = .{
+        .pixels = try ptm.Helpers.Matrix(ptm.Helpers.Color, ptm.Helpers.Color.BLACK).init(
+            std.testing.allocator, 2, 2
+        )
+    };
+    defer img.deinit(std.testing.allocator);
+
+    var writer = ptm.Writer.init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
+    
+    const uniques = try img.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    var header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
+        header,
+        &io_writer,
+        &.{.default},
+        &.{
+            &.{img, img},
+        },
+    );
+
+    var io_reader = std.Io.Reader.fixed(&buffer);
+    const reader = ptm.Reader.init(std.testing.allocator);
+    header = try reader.getHeader(&io_reader);
+
+    var ptmimg = try reader.loadWithHeader(
+        header, 
+        &io_reader
+    );
+    defer ptmimg.deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(ptmimg.header.width, 2);
 }
