@@ -16,6 +16,10 @@ pub const Modes = enum(u8) {
     /// Best use: Repeating colors in long chains
     /// https://en.wikipedia.org/wiki/Run-length_encoding
     rle,
+
+    /// Difference encoding
+    /// Best use: Similar sprites (minor changes)
+    diff,
 };
 
 pub fn Encoding(
@@ -37,8 +41,9 @@ pub fn Encoding(
             try writer.writeInt(PTM.LENGTH_TYPE, @intCast(data.len), PTM.ENDIANNESS);
 
             try switch (mode) {
-                .default => Algorithms(depth).Default.comp(data, header, writer, &map),
-                .rle => Algorithms(depth).RLE.comp(data, header, writer, &map),
+                .default => Algorithms(depth).Default.comp(allocator, data, header, writer, &map),
+                .rle => Algorithms(depth).RLE.comp(allocator, data, header, writer, &map),
+                .diff => Algorithms(depth).DIFF.comp(allocator, data, header, writer, &map),
             };
         }
 
@@ -56,6 +61,7 @@ pub fn Encoding(
             const sprite = try switch (mode) {
                 .default => Algorithms(depth).Default.decomp(allocator, header, reader, &map),
                 .rle => Algorithms(depth).RLE.decomp(allocator, header, reader, &map),
+                .diff => Algorithms(depth).DIFF.decomp(allocator, header, reader, &map),
             };
 
             return sprite;
@@ -66,13 +72,30 @@ pub fn Encoding(
 /// Algorithms to decompress rows of sprites
 pub fn Algorithms(comptime depth: ?PTM.COLOR_DEPTH) type {
     return struct {
+        fn indexToColors(
+            allocator: std.mem.Allocator, 
+            map: *std.AutoHashMap(PTM.COLOR_DEPTH.Type(depth), Color), 
+            data: []PTM.COLOR_DEPTH.Type(depth)
+        ) ![]Color {
+            var colors = try allocator.alloc(Color, data.len);
+            errdefer allocator.free(colors);
+
+            for (data, 0..) |idx, i| {
+                colors[i] = map.get(idx) orelse {
+                    std.debug.print("{any}", .{idx});
+                    return error.UnknownIndex;
+                };
+            } 
+            return colors;
+        }
+
         // CHECKPOINT: DEFAULT ALGORITHM
         /// Encodes each individual pixel as an index
         pub const Default = struct {
             const Self = @This();
 
             /// Compression method for the Default algorithm
-            fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth))) !void {
+            fn comp(_: std.mem.Allocator, data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth))) !void {
 
                 // Writing the images
                 for (data) |image| {
@@ -101,20 +124,14 @@ pub fn Algorithms(comptime depth: ?PTM.COLOR_DEPTH) type {
                     try reader.readSliceEndian(PTM.COLOR_DEPTH.Type(depth), buffer, PTM.ENDIANNESS);
 
                     // ALLOC: Allocated memory to store the colors inside of the image
-                    var pixels = try allocator.alloc(Color, capacity);
-                    errdefer allocator.free(pixels);
-
-                    // Loop through every pixel
-                    for (buffer, 0..) |c, i| {
-                        const color = map.get(c) orelse return error.UnknownColor;
-                        pixels[i] = color;
-                    }
+                    const colors = try indexToColors(allocator, map, buffer);
+                    errdefer allocator.free(colors);
 
                     sprites.add(.{ .pixels = .{
                         .columns = header.width,
                         .rows = header.height,
-                        .items = pixels,
-                    } });
+                        .items = colors,
+                    }});
                 }
 
                 return sprites.data;
@@ -146,7 +163,7 @@ pub fn Algorithms(comptime depth: ?PTM.COLOR_DEPTH) type {
             }
 
             /// Compression method for the RLE algorithm
-            fn comp(data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth))) !void {
+            fn comp(_: std.mem.Allocator, data: []const Image, _: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth))) !void {
 
                 // Writing the images
                 for (data) |image| {
@@ -207,6 +224,106 @@ pub fn Algorithms(comptime depth: ?PTM.COLOR_DEPTH) type {
                 }
 
                 return try imgs.toOwnedSlice(allocator);
+            }
+        };
+
+        // CHECKPOINT: DIFF ALGORITHM
+        /// Encodes the first image, and each data computes the difference between the previous frame
+        pub const DIFF = struct {
+            const Self = @This();
+
+            const DISTANCE_TYPE = u8;
+
+            const Entry = struct { idx: PTM.COLOR_DEPTH.Type(depth), dist: DISTANCE_TYPE };
+
+            /// Reads the next color entry
+            fn nextEntry(reader: *std.Io.Reader) !Entry {
+                const idx = try reader.takeInt(PTM.COLOR_DEPTH.Type(depth), PTM.ENDIANNESS);
+                const dist = try reader.takeInt(DISTANCE_TYPE, PTM.ENDIANNESS);
+                return .{ .idx = idx, .dist = dist };
+            }
+
+            /// Compression method for the difference algorithm
+            fn comp(allocator: std.mem.Allocator, data: []const Image, header: *const PTM.Header, writer: *std.Io.Writer, map: *std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth))) !void {
+                const capacity = @as(usize, header.height) * @as(usize, header.width);
+
+                // ALLOC: Store the previous frames in memory to compare.
+                var diff = try allocator.alloc(PTM.COLOR_DEPTH.Type(depth), capacity);
+                defer allocator.free(diff);
+                
+                // Write first image as reference
+                for (data[0].pixels.items, 0..) |px, i| {
+                    const idx = map.get(px) orelse return error.UnknownColor;
+                    try writer.writeInt(PTM.COLOR_DEPTH.Type(depth), idx, PTM.ENDIANNESS);
+                    diff[i] = idx;
+                }
+                
+                for (data[1..]) |image| {
+                    var last: usize = 0;
+                    for (image.pixels.items, 0..) |px, i| {
+                        const idx = map.get(px) orelse return error.UnknownColor;
+                        const dist = i - last;
+
+                        if (diff[i] != idx or dist >= std.math.maxInt(DISTANCE_TYPE)) {
+                            try writer.writeInt(PTM.COLOR_DEPTH.Type(depth), idx, PTM.ENDIANNESS);
+                            try writer.writeInt(DISTANCE_TYPE, @intCast(dist), PTM.ENDIANNESS);
+                            last = i;
+                            diff[i] = idx;
+                        }
+                    }
+
+                    // Write divider
+                    try writer.writeInt(
+                        PTM.COLOR_DEPTH.Type(depth), 
+                        std.math.maxInt(PTM.COLOR_DEPTH.Type(depth)), 
+                        PTM.ENDIANNESS
+                    );
+                }
+            }
+
+            /// Decompression method for the Default algorithm
+            fn decomp(allocator: std.mem.Allocator, header: *const PTM.Header, reader: *std.Io.Reader, map: *std.AutoHashMap(PTM.COLOR_DEPTH.Type(depth), Color)) ![]Image {
+                const num = try reader.takeInt(PTM.LENGTH_TYPE, PTM.ENDIANNESS);
+                const capacity = @as(usize, header.height) * @as(usize, header.width);
+
+                var images = try std.ArrayList(Image).initCapacity(allocator, num);
+
+                var diff = try allocator.alloc(PTM.COLOR_DEPTH.Type(depth), capacity);
+                defer allocator.free(diff);
+
+                try reader.readSliceAll(diff); // Read first image
+                var colors = try indexToColors(allocator, map, diff);
+                errdefer allocator.free(colors);
+
+                try images.append(allocator, .{ .pixels = .{
+                    .columns = header.width,
+                    .rows = header.height,
+                    .items = colors,
+                }});
+
+                var last: usize = 0;
+                while (images.items.len != num) {
+                    const entry = nextEntry(reader) catch { break; };
+
+                    if (entry.idx == std.math.maxInt(PTM.COLOR_DEPTH.Type(depth))) {
+                        colors = try indexToColors(allocator, map, diff);
+                        errdefer allocator.free(colors);
+                        
+                        try images.append(allocator, .{ .pixels = .{
+                            .columns = header.width,
+                            .rows = header.height,
+                            .items = colors,
+                        }});
+
+                        last = 0;
+                        continue;
+                    }
+
+                    last += entry.dist;
+                    diff[last] = entry.idx;
+                }
+
+                return try images.toOwnedSlice(allocator);
             }
         };
     };

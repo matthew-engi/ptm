@@ -56,10 +56,7 @@ pub fn Reader(
 
             while (true) {
                 // Read the mode of the sprite row, then feed it in the decoder
-                const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANNESS) catch |err| switch (err) {
-                    error.EndOfStream => break,
-                    else => return err,
-                };
+                const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANNESS) catch { break; };
 
                 // ALLOC: Allocated memory to []Image
                 const sprite = try Encoder.Encoding(depth).decode(self.allocator, mode, &header, reader);

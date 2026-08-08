@@ -223,6 +223,45 @@ test "Back to Back: RLE 2x 2x2 BLACK" {
     try std.testing.expectEqual(ptmimg.header.width, 2);
 }
 
+test "Back to Back: DIFF 2x 2x2 BLACK" {
+    var buffer: [30]u8 = undefined;
+
+    const img: ptm.Helpers.Image = .{
+        .pixels = try ptm.Helpers.Matrix(ptm.Helpers.Color, ptm.Helpers.Color.BLACK).init(
+            std.testing.allocator, 2, 2
+        )
+    };
+    defer img.deinit(std.testing.allocator);
+
+    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var io_writer = std.Io.Writer.fixed(&buffer);
+    
+    const uniques = try img.pixels.getUniques(std.testing.allocator);
+    defer std.testing.allocator.free(uniques);
+
+    var header = writer.getHeader(2, 2, 15, uniques);
+    try writer.writeWithHeader(
+        header,
+        &io_writer,
+        &.{.diff},
+        &.{
+            &.{img, img},
+        },
+    );
+
+    var io_reader = std.Io.Reader.fixed(&buffer);
+    const reader = ptm.Reader(.u8).init(std.testing.allocator);
+    header = try reader.getHeader(&io_reader);
+
+    var ptmimg = try reader.loadWithHeader(
+        header, 
+        &io_reader
+    );
+    defer ptmimg.deinit(std.testing.allocator);
+
+    try std.testing.expectEqual(2, ptmimg.header.height);
+}
+
 test "Back to Back: DEFAULT 2x 2x2 BLACK" {
     var buffer: [18]u8 = undefined;
 
