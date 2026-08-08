@@ -9,53 +9,49 @@ const Encoder = @import("./encoder.zig");
 // General structs for the format
 const PTM = @import("../mod.zig");
 
-pub const Writer = struct {
-    const Self = @This();
+pub fn Writer(comptime depth: ?PTM.COLOR_DEPTH) type {
+    return struct {
+        const Self = @This();
 
-    allocator: std.mem.Allocator,
+        allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) Self {
-        return .{ .allocator = allocator };
-    }
-
-    /// Gets the format of the header for the Writer
-    pub fn getHeader(
-        _: *const Self,
-        height: u8,
-        width: u8,
-        rate: u8,
-        colors: []Color, // Unique colors list (color mapping)
-    ) PTM.Header {
-        return PTM.Header{ .height = height, .width = width, .rate = rate, .colors = colors };
-    }
-
-    /// Writes the information about the PTM into the file
-    pub fn writeWithHeader(
-        self: *const Self, 
-        header: PTM.Header, 
-        writer: *std.Io.Writer, 
-        modes: []const Encoder.Modes, 
-        sprites: []const []const Image
-    ) !void {
-
-        // Write the header first
-        try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIANNESS);
-        try writer.writeInt(PTM.DIM_TYPE, header.width, PTM.ENDIANNESS);
-        try writer.writeInt(PTM.RATE_TYPE, header.rate, PTM.ENDIANNESS);
-
-        // Write sprites data
-        var color_map = std.AutoHashMap(Color, PTM.COLOR_RANGE_TYPE).init(self.allocator);
-        defer color_map.deinit();
-
-        try writer.writeInt(PTM.COLOR_RANGE_TYPE, @intCast(header.colors.len), PTM.ENDIANNESS);
-
-        for (header.colors, 0..) |color, i| {
-            try color_map.put(color, @intCast(i)); // May fail if too many colors
-            try writer.writeStruct(color, PTM.ENDIANNESS);
+        pub fn init(allocator: std.mem.Allocator) Self {
+            return .{ .allocator = allocator };
         }
 
-        for (sprites, 0..) |sprite, i| {
-            try Encoder.encode(self.allocator, modes[i], sprite, &header, writer);
+        /// Gets the format of the header for the Writer
+        pub fn getHeader(
+            _: *const Self,
+            height: PTM.DIM_TYPE,
+            width: PTM.DIM_TYPE,
+            rate: PTM.RATE_TYPE,
+            colors: []Color, // Unique colors list (color mapping)
+        ) PTM.Header {
+            return PTM.Header{ .height = height, .width = width, .rate = rate, .colors = colors };
         }
-    }
-};
+
+        /// Writes the information about the PTM into the file
+        pub fn writeWithHeader(self: *const Self, header: PTM.Header, writer: *std.Io.Writer, modes: []const Encoder.Modes, sprites: []const []const Image) !void {
+
+            // Write the header first
+            try writer.writeInt(PTM.DIM_TYPE, header.height, PTM.ENDIANNESS);
+            try writer.writeInt(PTM.DIM_TYPE, header.width, PTM.ENDIANNESS);
+            try writer.writeInt(PTM.RATE_TYPE, header.rate, PTM.ENDIANNESS);
+
+            // Write sprites data
+            var color_map = std.AutoHashMap(Color, PTM.COLOR_DEPTH.Type(depth)).init(self.allocator);
+            defer color_map.deinit();
+
+            try writer.writeInt(PTM.COLOR_DEPTH.Type(depth), @intCast(header.colors.len), PTM.ENDIANNESS);
+
+            for (header.colors, 0..) |color, i| {
+                try color_map.put(color, @intCast(i)); // May fail if too many colors
+                try writer.writeStruct(color, PTM.ENDIANNESS);
+            }
+
+            for (sprites, 0..) |sprite, i| {
+                try Encoder.Encoding(depth).encode(self.allocator, modes[i], sprite, &header, writer);
+            }
+        }
+    };
+}

@@ -11,7 +11,18 @@ pub const DIM_TYPE = u8; // Limit of dimensions (height, width)
 pub const RATE_TYPE = u8; // Limit of framerate
 pub const MODE_TYPE = u8; // Different compression modes
 pub const LENGTH_TYPE = u16; // How many pictures a sprite can have
-pub const COLOR_RANGE_TYPE = u8; // Limit of differently encoded colors (colors)
+
+/// Describes how many colors can be encoded / decoded
+pub const COLOR_DEPTH = enum {
+   u8, u16, u24, // (u24 is capable of describe every 24-bit color)
+
+   pub fn Type(comptime self: ?COLOR_DEPTH) type {
+      const depth = self orelse .u8;
+      return switch (depth) {
+         .u8 => u8, .u16 => u16, .u24 => u32, 
+      };
+   }
+};
 
 // ENDIANNESS
 pub const ENDIANNESS = std.builtin.Endian.big;
