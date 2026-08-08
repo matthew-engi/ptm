@@ -1,10 +1,10 @@
 # "Protomap" Sprite Library
 
+![Static Badge](https://img.shields.io/badge/Zig-0.16.0-2?style=flat&color=orange&link=https%3A%2F%2Fziglang.org%2Fdownload%2F0.16.0%2Frelease-notes.html)
+
 This is a library to read and write .ptm files containing sprites for byter-zig
 
 ## Install & Build
-
-This library currently uses zig [0.16.0](https://ziglang.org/download/)
 
 Via the terminal, run the following command:
 
