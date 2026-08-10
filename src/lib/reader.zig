@@ -10,7 +10,8 @@ const Image = @import("../helpers/image.zig").Image;
 const PTM = @import("../mod.zig");
 
 pub fn Reader(
-    comptime depth: ?PTM.COLOR_DEPTH,
+    comptime color_depth: ?PTM.COLOR_DEPTH,
+    comptime dim_depth: ?PTM.DIM_DEPTH,
 ) type {
     return struct {
         const Self = @This();
@@ -23,15 +24,18 @@ pub fn Reader(
         }
 
         /// Gets the header for the Reader
-        pub fn getHeader(self: *const Self, reader: *std.Io.Reader) !PTM.Header {
+        pub fn getHeader(
+            self: *const Self, 
+            reader: *std.Io.Reader
+        ) !PTM.Header(dim_depth) {
 
             // General data
-            const height = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
-            const width = try reader.takeInt(PTM.DIM_TYPE, PTM.ENDIANNESS);
+            const height = try reader.takeInt(PTM.DIM_DEPTH.Type(dim_depth), PTM.ENDIANNESS);
+            const width = try reader.takeInt(PTM.DIM_DEPTH.Type(dim_depth), PTM.ENDIANNESS);
             const rate = try reader.takeInt(PTM.RATE_TYPE, PTM.ENDIANNESS);
 
             // Colors
-            const count = try reader.takeInt(PTM.COLOR_DEPTH.Type(depth), PTM.ENDIANNESS);
+            const count = try reader.takeInt(PTM.COLOR_DEPTH.Type(color_depth), PTM.ENDIANNESS);
 
             // ALLOC: Allocate memory for the list of colors
             const colors = try self.allocator.alloc(Color, @intCast(count));
@@ -43,7 +47,12 @@ pub fn Reader(
         }
 
         /// Returns an array of sprites
-        pub fn loadWithHeader(self: *const Self, header: PTM.Header, reader: *std.Io.Reader) !PTM.PTM {
+        pub fn loadWithHeader(
+            self: *const Self, 
+            header: PTM.Header(dim_depth), 
+            reader: *std.Io.Reader
+        ) !PTM.PTM(dim_depth) {
+        
             var sprites: std.ArrayList([]Image) = .empty;
             errdefer {
                 for (sprites.items) |sprite| {
@@ -56,10 +65,14 @@ pub fn Reader(
 
             while (true) {
                 // Read the mode of the sprite row, then feed it in the decoder
-                const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANNESS) catch { break; };
+                const mode = reader.takeEnum(Encoder.Modes, PTM.ENDIANNESS) catch {
+                    break;
+                };
 
                 // ALLOC: Allocated memory to []Image
-                const sprite = try Encoder.Encoding(depth).decode(self.allocator, mode, &header, reader);
+                const sprite = try Encoder.Encoding(color_depth, dim_depth).decode(
+                    self.allocator, mode, &header, reader
+                );
                 try sprites.append(self.allocator, sprite);
             }
 

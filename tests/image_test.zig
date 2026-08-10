@@ -45,7 +45,7 @@ test "Read Image -> PTM: PTM Image" {
     const uniques = try image.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    var writer = ptm.Writer(.u24).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u24).init(std.testing.allocator);
     const header = writer.getHeader(255, 255, 1, uniques);
     var io_writer = std.Io.Writer.fixed(&buffer);
 
@@ -79,7 +79,7 @@ test "Image to PTM: DEFAULT 2x2 RGCB Image" {
     const uniques = try image.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
 
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     const header = writer.getHeader(2, 2, 30, uniques);
     var io_writer = std.Io.Writer.fixed(&buffer);
     try writer.writeWithHeader(
@@ -108,7 +108,7 @@ test "Image to PTM: DEFAULT 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
@@ -136,7 +136,7 @@ test "Image to PTM: RLE 2x 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
@@ -164,7 +164,7 @@ test "Image to PTM: RLE x2 2x2 BLACK" {
     defer img.deinit(std.testing.allocator);
 
     var buffer: [1024]u8 = undefined;
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     const uniques = try img.pixels.getUniques(std.testing.allocator);
     defer std.testing.allocator.free(uniques);
@@ -194,7 +194,7 @@ test "Back to Back: RLE 2x 2x2 BLACK" {
     };
     defer img.deinit(std.testing.allocator);
 
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     
     const uniques = try img.pixels.getUniques(std.testing.allocator);
@@ -211,7 +211,7 @@ test "Back to Back: RLE 2x 2x2 BLACK" {
     );
 
     var io_reader = std.Io.Reader.fixed(&buffer);
-    const reader = ptm.Reader(.u8).init(std.testing.allocator);
+    const reader = ptm.Reader(.u8, .u8).init(std.testing.allocator);
     header = try reader.getHeader(&io_reader);
 
     var ptmimg = try reader.loadWithHeader(
@@ -233,7 +233,7 @@ test "Back to Back: DIFF 2x 2x2 BLACK" {
     };
     defer img.deinit(std.testing.allocator);
 
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     
     const uniques = try img.pixels.getUniques(std.testing.allocator);
@@ -250,7 +250,7 @@ test "Back to Back: DIFF 2x 2x2 BLACK" {
     );
 
     var io_reader = std.Io.Reader.fixed(&buffer);
-    const reader = ptm.Reader(.u8).init(std.testing.allocator);
+    const reader = ptm.Reader(.u8, .u8).init(std.testing.allocator);
     header = try reader.getHeader(&io_reader);
 
     var ptmimg = try reader.loadWithHeader(
@@ -272,7 +272,7 @@ test "Back to Back: DEFAULT 2x 2x2 BLACK" {
     };
     defer img.deinit(std.testing.allocator);
 
-    var writer = ptm.Writer(.u8).init(std.testing.allocator);
+    var writer = ptm.Writer(.u8, .u8).init(std.testing.allocator);
     var io_writer = std.Io.Writer.fixed(&buffer);
     
     const uniques = try img.pixels.getUniques(std.testing.allocator);
@@ -289,7 +289,7 @@ test "Back to Back: DEFAULT 2x 2x2 BLACK" {
     );
 
     var io_reader = std.Io.Reader.fixed(&buffer);
-    const reader = ptm.Reader(.u8).init(std.testing.allocator);
+    const reader = ptm.Reader(.u8, .u8).init(std.testing.allocator);
     header = try reader.getHeader(&io_reader);
 
     var ptmimg = try reader.loadWithHeader(

@@ -6,59 +6,80 @@ const Color = @import("./helpers/color.zig").Color;
 const Image = @import("./helpers/image.zig").Image;
 
 // -------------------------------------------------------------------------------- //
+// General enum descriptions
+fn DEPTHS (comptime default: anytype) type {
+   return enum {
+      const Self = @This();
+
+      u8, u16, u24, u32, u40, u48, u56, u64,
+
+      /// Returns the type of the chosen depth
+      pub fn Type(comptime self: ?Self) type {
+         const depth = self orelse default;
+         return switch (depth) {
+            .u8 => u8, .u16 => u16, .u24 => u24,
+            .u32 => u32, .u40 => u40, .u48 => u48, 
+            .u56 => u56, .u64 => u64
+         };
+      }
+   };
+}
+
+// -------------------------------------------------------------------------------- //
 // Header encoding
-pub const DIM_TYPE = u8; // Limit of dimensions (height, width)
-pub const RATE_TYPE = u8; // Limit of framerate
-pub const MODE_TYPE = u8; // Different compression modes
-pub const LENGTH_TYPE = u16; // How many pictures a sprite can have
-
-/// Describes how many colors can be encoded / decoded
-pub const COLOR_DEPTH = enum {
-   u8, u16, u24, // (u24 is capable of describe every 24-bit color)
-
-   pub fn Type(comptime self: ?COLOR_DEPTH) type {
-      const depth = self orelse .u8;
-      return switch (depth) {
-         .u8 => u8, .u16 => u16, .u24 => u32, 
-      };
-   }
-};
+pub const RATE_TYPE     = u8; // Limit of framerate
+pub const MODE_TYPE     = u8; // Different compression modes
+pub const LENGTH_TYPE   = u16; // How many pictures a sprite can have
+pub const DIM_DEPTH      = DEPTHS(u8); // Limit of dimensions (height, width)
+pub const COLOR_DEPTH   = DEPTHS(u8); // Describes how many colors can be encoded / decoded
 
 // ENDIANNESS
 pub const ENDIANNESS = std.builtin.Endian.big;
-// -------------------------------------------------------------------------------- //
 
 // Data encodings are found in compression.zig
+// -------------------------------------------------------------------------------- //
 
 /// Data included in the header of the PTM file
-pub const Header = struct {
-   height: DIM_TYPE, // Height of each image
-   width: DIM_TYPE, // Width of each image
-   rate: RATE_TYPE, // Rate at which the sprites play
-   colors: []Color, // Unique colors found in the image
+pub fn Header (
+   comptime dim: ?DIM_DEPTH
+) type {
+   return struct {
+      const Self = @This();
 
-   pub fn deinit(self: *const Header, allocator: std.mem.Allocator) void {
-      allocator.free(self.colors);
-   }
-};
+      height:  DIM_DEPTH.Type(dim), // Height of each image
+      width:   DIM_DEPTH.Type(dim), // Width of each image
+      rate:    RATE_TYPE, // Rate at which the sprites play
+      colors:  []Color, // Unique colors found in the image
+
+      pub fn deinit(self: *const Self, allocator: std.mem.Allocator) void {
+         allocator.free(self.colors);
+      }
+   };
+}
 
 /// Complete struct with header and data
-pub const PTM = struct {
-   header: Header,
-   data: [][]Image,
+pub fn PTM (
+   comptime dim: ?DIM_DEPTH
+) type {
+   return struct {
+      const Self = @This();
 
-   pub fn deinit(self: *const PTM, allocator: std.mem.Allocator) void {
-      self.header.deinit(allocator);
-      for (self.data) |sprite| {
-         for (sprite) |img| {
-            img.deinit(allocator);
+      header: Header(dim),
+      data: [][]Image,
+
+      pub fn deinit(self: *const Self, allocator: std.mem.Allocator) void {
+         self.header.deinit(allocator);
+         for (self.data) |sprite| {
+            for (sprite) |img| {
+               img.deinit(allocator);
+            }
+            allocator.free(sprite);
          }
-         allocator.free(sprite);
-      }
 
-      allocator.free(self.data);
-   }
-};
+         allocator.free(self.data);
+      }
+   };
+}
 
 /// Image array wrapper
 pub const Sprite = struct {
